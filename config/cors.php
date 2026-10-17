@@ -2,7 +2,7 @@
 
 return [
     // Statisticile publice pot fi citite din site-urile permise în config/embed.php
-    'paths' => ['api/stats'],
+    'paths' => ['api/stats', 'api/public-summary'],
     'allowed_methods' => ['GET'],
     'allowed_origins' => (require __DIR__.'/embed.php')['origins'],
     'allowed_origins_patterns' => [],

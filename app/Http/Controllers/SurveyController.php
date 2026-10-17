@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SurveyResponse;
 use App\Support\SurveyStats;
 use App\Support\SurveySubmission;
+use App\Support\Zones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,6 +15,7 @@ class SurveyController extends Controller
     private const MAX_BYTES = 16384;
     private const LIMIT_MAX = 120;
     private const LIMIT_WINDOW = 600; // secunde
+    private const MIN_ZONE_RESPONSES = 5; // sub acest prag o zonă nu se publică
 
     /** Primește un chestionar completat (JSON) și îl salvează. */
     public function submit(Request $request): JsonResponse
@@ -47,6 +49,53 @@ class SurveyController extends Controller
     public function stats(): JsonResponse
     {
         return $this->json(SurveyStats::dataset(false))->header('Cache-Control', 'public, max-age=30');
+    }
+
+    /**
+     * Statistici agregate pentru alte site-uri (Green Map). Fără răspunsuri individuale:
+     * doar totaluri, iar zonele apar numai dacă au cel puțin MIN_ZONE_RESPONSES mențiuni.
+     */
+    public function publicSummary(): JsonResponse
+    {
+        $students = SurveyResponse::where('in_stats', true);
+
+        // Zile raportate pe săptămână, nu număr de elevi.
+        $transport = [];
+        foreach (['foot', 'bike', 'public', 'car', 'taxi', 'other'] as $mode) {
+            $transport[$mode] = (int) (clone $students)->whereNotNull('m_'.$mode)->sum('m_'.$mode);
+        }
+
+        $travelTime = array_fill_keys(['sub15', '15-20', '20-30', 'peste30'], 0);
+        foreach ((clone $students)->whereNotNull('time_to_school')->selectRaw('time_to_school, COUNT(*) as c')->groupBy('time_to_school')->pluck('c', 'time_to_school') as $k => $c) {
+            if (array_key_exists($k, $travelTime)) {
+                $travelTime[$k] = (int) $c;
+            }
+        }
+
+        $help = array_fill_keys(['info', 'rute', 'piste', 'altceva'], 0);
+        foreach ((clone $students)->whereNotNull('help_opts')->pluck('help_opts') as $csv) {
+            foreach (explode(',', (string) $csv) as $opt) {
+                if (array_key_exists($opt, $help)) {
+                    $help[$opt]++;
+                }
+            }
+        }
+
+        $zones = array_map(
+            fn ($z) => ['name' => $z['name'], 'responses' => $z['n']],
+            Zones::counts((clone $students)->whereNotNull('route')->pluck('route'), self::MIN_ZONE_RESPONSES),
+        );
+
+        return $this->json([
+            'ok' => true,
+            'updatedAt' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
+            'totalResponses' => SurveyResponse::count(),
+            'studentResponses' => (clone $students)->count(),
+            'transport' => $transport,
+            'travelTime' => $travelTime,
+            'help' => $help,
+            'zones' => $zones,
+        ])->header('Cache-Control', 'public, max-age=30');
     }
 
     private function json(array $data, int $status = 200): JsonResponse

@@ -23,3 +23,4 @@ Route::view('/', 'chestionar');
 Route::view('/embed/statistici', 'embed.statistici');
 Route::post('/api/submit', [SurveyController::class, 'submit']);
 Route::get('/api/stats', [SurveyController::class, 'stats']);
+Route::get('/api/public-summary', [SurveyController::class, 'publicSummary']);
