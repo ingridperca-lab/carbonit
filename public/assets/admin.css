@@ -73,3 +73,5 @@ input[type=text],input[type=password],input[type=search],select{width:100%;paddi
 .pill-not_student{color:var(--muted)}
 .link-danger{padding:0;border:0;background:none;color:var(--heat);font:inherit;font-size:.85rem;text-decoration:underline;cursor:pointer}
 .pager{display:flex;align-items:center;gap:16px;justify-content:center;margin-top:20px}
+.pill-short_trip{color:var(--muted)}
+.pill-zero_days{color:var(--muted)}

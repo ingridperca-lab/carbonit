@@ -16,7 +16,7 @@
     </select>
   </div>
   <div class="grow">
-    <label for="f-q">Caută în trasee și comentarii</label>
+    <label for="f-q">Caută în trasee, ce deranjează și comentarii</label>
     <input id="f-q" name="q" type="search" value="{{ $q }}" placeholder="de exemplu: Copou">
   </div>
   <label class="check"><input type="checkbox" name="comentarii" value="1" @checked($onlyComments)> Doar cu comentariu</label>
@@ -28,7 +28,7 @@
 <div class="table-wrap">
 <table class="a-table">
   <thead>
-    <tr><th>#</th><th>Data</th><th>Stare</th><th>Zile</th><th>Cum au ajuns (zile)</th><th>Drum</th><th>Trafic</th><th>Traseu</th><th>Alternativă</th><th>Ce ar ajuta</th><th>Comentariu</th><th></th></tr>
+    <tr><th>#</th><th>Data</th><th>Stare</th><th>Zile</th><th>Cum au ajuns (zile)</th><th>Drum</th><th>Timp</th><th>Traseu</th><th>Ce deranjează</th><th>Alternativă</th><th>Ce ar ajuta</th><th>Comentariu</th><th></th></tr>
   </thead>
   <tbody>
   @forelse ($rows as $r)
@@ -47,8 +47,9 @@
       <td>{{ $r->days ?? '–' }}</td>
       <td>{{ $modes ? implode(', ', $modes) : '–' }}</td>
       <td class="nw">{{ S::label('dist', $r->dist) }}</td>
-      <td class="nw">{{ S::label('traffic', $r->traffic) }}</td>
+      <td class="nw">{{ S::label('time', $r->time_to_school) }}</td>
       <td class="wide">{{ $r->route ?: '–' }}</td>
+      <td class="wide">{{ $r->bother ?: '–' }}</td>
       <td>{{ $r->alt === null ? '–' : S::label('alt', $r->alt).($r->replace_days !== null ? ' ('.$r->replace_days.' dim.)' : '') }}</td>
       <td>{{ S::labelList('help', $r->help_opts) }}</td>
       <td class="wide">{{ $r->comment ?: '–' }}</td>
@@ -61,7 +62,7 @@
       </td>
     </tr>
   @empty
-    <tr><td colspan="12" class="muted">Nu există răspunsuri pentru filtrele alese.</td></tr>
+    <tr><td colspan="13" class="muted">Nu există răspunsuri pentru filtrele alese.</td></tr>
   @endforelse
   </tbody>
 </table>

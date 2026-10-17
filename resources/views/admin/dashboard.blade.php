@@ -7,7 +7,8 @@
   <div class="tile"><span>Răspunsuri primite</span><strong>{{ $total }}</strong></div>
   <div class="tile"><span>Elevi în statistică</span><strong>{{ $students }}</strong></div>
   <div class="tile"><span>Au venit cu mașina (complet)</span><strong>{{ $byStatus['complete'] }}</strong></div>
-  <div class="tile"><span>Nu sunt elevi</span><strong>{{ $byStatus['not_student'] }}</strong></div>
+  <div class="tile"><span>Drum sub 15 minute</span><strong>{{ $byStatus['short_trip'] }}</strong></div>
+  <div class="tile"><span>Nu sunt elevi/studenți</span><strong>{{ $byStatus['not_student'] }}</strong></div>
   <div class="tile"><span>0 zile la școală</span><strong>{{ $byStatus['zero_days'] }}</strong></div>
   <div class="tile"><span>Ultimele 24 de ore</span><strong>{{ $last24 }}</strong></div>
 </div>
@@ -36,6 +37,19 @@
   <h2>Harta traseelor</h2>
   <p class="muted">Zonele menționate în trasee, chiar și o singură dată. Pe site apar doar cele menționate de cel puțin 2 elevi.</p>
   <div id="mapBody" class="mp-body"></div>
+</section>
+
+<section class="a-sec">
+  <h2>Ce îi deranjează dimineața</h2>
+  @if ($bothers->isEmpty())
+    <p class="muted">Încă nu avem răspunsuri.</p>
+  @else
+    <ul class="comments">
+      @foreach ($bothers as $c)
+        <li><span class="muted">{{ $c->created_at->format('d.m.Y H:i') }}</span><p>{{ $c->bother }}</p></li>
+      @endforeach
+    </ul>
+  @endif
 </section>
 
 <section class="a-sec">

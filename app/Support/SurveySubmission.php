@@ -10,11 +10,11 @@ class SurveySubmission
 {
     private const MODE_KEYS = ['foot', 'bike', 'public', 'car', 'taxi', 'other'];
     private const OPT_DIST = ['sub1', '1-3', '3-5', '5-10', 'peste10', 'nu_stiu'];
-    private const OPT_TRAFFIC = ['deloc', 'sub5', '5-10', '10-20', '20-30', 'peste30', 'nu_stiu'];
+    private const OPT_TIME = ['sub15', '15-20', '20-30', 'peste30'];
     private const OPT_WHY = ['special', 'ocol', 'oricum', 'diferit', 'nu_stiu'];
-    private const OPT_SHARED = ['nu', 'da', 'uneori', 'nu_stiu'];
+    private const OPT_SHARED = ['nu', 'da', 'uneori'];
     private const OPT_ALT = ['foot', 'bike', 'public', 'other', 'niciuna'];
-    private const OPT_BLOCK = ['dist', 'timp', 'legaturi', 'traseu', 'orar', 'vreme', 'alt', 'nu_raspund'];
+    private const OPT_BLOCK = ['dist', 'timp', 'legaturi', 'transport', 'traseu', 'orar', 'vreme', 'alt', 'nu_raspund'];
     private const OPT_HELP = ['info', 'rute', 'piste', 'altceva'];
 
     /**
@@ -29,7 +29,7 @@ class SurveySubmission
         $row = [
             'status' => null, 'in_stats' => false, 'days' => null,
             'm_foot' => null, 'm_bike' => null, 'm_public' => null, 'm_car' => null, 'm_taxi' => null, 'm_other' => null,
-            'dist' => null, 'traffic' => null, 'route' => null,
+            'time_to_school' => null, 'dist' => null, 'route' => null, 'bother' => null,
             'why' => null, 'shared' => null, 'alt' => null, 'replace_days' => null,
             'block_opts' => null, 'help_opts' => null, 'comment' => null, 'taxi_separate' => false,
         ];
@@ -52,6 +52,16 @@ class SurveySubmission
         $row['days'] = $days;
         if ($days === 0) {
             $row['status'] = 'zero_days';
+
+            return [true, $row];
+        }
+
+        if (! self::inSet($a['time'] ?? null, self::OPT_TIME)) {
+            return [false, 'time'];
+        }
+        $row['time_to_school'] = $a['time'];
+        if ($a['time'] === 'sub15') {
+            $row['status'] = 'short_trip';
 
             return [true, $row];
         }
@@ -79,56 +89,49 @@ class SurveySubmission
         }
         $row['dist'] = $a['dist'];
 
-        if ($m['car'] + $m['public'] + $m['taxi'] + $m['other'] > 0) {
-            if (! self::inSet($a['traffic'] ?? null, self::OPT_TRAFFIC)) {
-                return [false, 'traffic'];
-            }
-            $row['traffic'] = $a['traffic'];
-        }
         $row['route'] = self::cleanText($a['route'] ?? null, 300);
 
         $car = $m['car'];
-        if ($car === 0) {
-            $row['status'] = 'no_car';
-
-            return [true, $row];
-        }
-
-        if (! self::inSet($a['why'] ?? null, self::OPT_WHY)) {
-            return [false, 'why'];
-        }
-        if (! self::inSet($a['shared'] ?? null, self::OPT_SHARED)) {
-            return [false, 'shared'];
-        }
-        if (! self::inSet($a['alt'] ?? null, self::OPT_ALT)) {
-            return [false, 'alt'];
-        }
-        $row['why'] = $a['why'];
-        $row['shared'] = $a['shared'];
-        $row['alt'] = $a['alt'];
-
-        if ($a['alt'] === 'niciuna') {
-            $row['replace_days'] = 0;
-        } else {
-            $rep = $a['replace'] ?? null;
-            if (! is_int($rep) || $rep < 0 || $rep > $car) {
-                return [false, 'replace'];
+        if ($car > 0) {
+            if (! self::inSet($a['why'] ?? null, self::OPT_WHY)) {
+                return [false, 'why'];
             }
-            $row['replace_days'] = $rep;
+            if (! self::inSet($a['shared'] ?? null, self::OPT_SHARED)) {
+                return [false, 'shared'];
+            }
+            if (! self::inSet($a['alt'] ?? null, self::OPT_ALT)) {
+                return [false, 'alt'];
+            }
+            $row['why'] = $a['why'];
+            $row['shared'] = $a['shared'];
+            $row['alt'] = $a['alt'];
+
+            if ($a['alt'] === 'niciuna') {
+                $row['replace_days'] = 0;
+            } else {
+                $rep = $a['replace'] ?? null;
+                if (! is_int($rep) || $rep < 0 || $rep > $car) {
+                    return [false, 'replace'];
+                }
+                $row['replace_days'] = $rep;
+            }
+
+            $block = self::cleanMulti($a['block'] ?? null, self::OPT_BLOCK, 2);
+            if ($block === null) {
+                return [false, 'block'];
+            }
+            $row['block_opts'] = implode(',', $block);
         }
 
-        $block = self::cleanMulti($a['block'] ?? null, self::OPT_BLOCK, 2);
-        if ($block === null) {
-            return [false, 'block'];
-        }
+        // Ultimele două întrebări le primesc toți elevii care au ajuns până aici.
+        $row['bother'] = self::cleanText($a['bother'] ?? null, 300);
         $help = self::cleanMulti($a['help'] ?? null, self::OPT_HELP, 4);
         if ($help === null) {
             return [false, 'help'];
         }
-        $row['block_opts'] = implode(',', $block);
         $row['help_opts'] = implode(',', $help);
         $row['comment'] = self::cleanText($a['comment'] ?? null, 300);
-        $row['status'] = 'complete';
+        $row['status'] = $car > 0 ? 'complete' : 'no_car';
 
         return [true, $row];
     }

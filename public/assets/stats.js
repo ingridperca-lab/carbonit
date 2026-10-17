@@ -10,14 +10,13 @@ function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&am
 var MODES=[['foot','Pe jos'],['bike','Bicicletă'],['public','Transport public'],['car','Mașină, cu familia sau colegi'],['taxi','Taxi'],['other','Altul']];
 var OPTS={
   dist:[['sub1','Sub 1 km'],['1-3','1–3 km'],['3-5','3–5 km'],['5-10','5–10 km'],['peste10','Peste 10 km'],['nu_stiu','Nu știu']],
-  traffic:[['deloc','Aproape deloc'],['sub5','Sub 5 minute'],['5-10','5–10 minute'],['10-20','10–20 minute'],['20-30','20–30 de minute'],['peste30','Peste 30 de minute'],['nu_stiu','Nu știu']],
+  time:[['sub15','Sub 15 minute'],['15-20','15–20 de minute'],['20-30','20–30 de minute'],['peste30','Peste 30 de minute']],
   why:[['special','Special pentru școală'],['ocol','Face un ocol'],['oricum','Merge oricum pe acolo'],['diferit','Situații diferite'],['nu_stiu','Nu știu']],
-  shared:[['nu','Nu'],['da','Da'],['uneori','Uneori'],['nu_stiu','Nu știu']],
-  alt:[['foot','Pe jos'],['bike','Bicicletă'],['public','Transport public'],['other','Altă variantă'],['niciuna','Niciuna acum']],
-  block:[['dist','Distanța'],['timp','Timpul'],['legaturi','Legăturile de transport'],['traseu','Traseul dificil'],['orar','Orarul'],['vreme','Vremea'],['alt','Alt motiv'],['nu_raspund','Prefer să nu răspund']],
+  shared:[['nu','Nu'],['da','Da'],['uneori','Uneori']],
+  alt:[['foot','Pe jos'],['bike','Bicicletă/trotinetă electrică'],['public','Transport public'],['other','Altă variantă'],['niciuna','Niciuna acum']],
+  block:[['dist','Distanța'],['timp','Timpul'],['legaturi','Legăturile de transport'],['transport','Lipsa mijloacelor de transport'],['traseu','Traseul dificil'],['orar','Orarul'],['vreme','Vremea'],['alt','Alt motiv'],['nu_raspund','Prefer să nu răspund']],
   help:[['info','Informații despre transport'],['rute','Adăugarea unor noi rute de autobuz/tramvai'],['piste','Implementarea pistelor pentru bicicletă'],['altceva','Altceva']]
 };
-var TRAFFIC_MID={deloc:0,sub5:2.5,'5-10':7.5,'10-20':15,'20-30':25,peste30:40};
 var TAIL=['nu_stiu','nu_raspund','altceva','alt','other'];
 
 function optMap(k){var m={};OPTS[k].forEach(function(o){m[o[0]]=o[1];});return m;}
@@ -83,23 +82,23 @@ function render(o){
   var car=moving.filter(function(r){return r.modes.car>0;});
   var pub=moving.filter(function(r){return r.modes.public>0;});
 
-  var help=countOpts(car,'help',{multi:true,sort:true});
+  var help=countOpts(rows.filter(function(r){return r.days>0&&r.modes;}),'help',{multi:true,sort:true});
   var topHelp=help.items[0];
-  var tr=moving.filter(function(r){return r.traffic in TRAFFIC_MID;});
-  var mean=tr.length?tr.reduce(function(s,r){return s+TRAFFIC_MID[r.traffic];},0)/tr.length:null;
+  var withTime=rows.filter(function(r){return r.time!==undefined;});
+  var shortTrip=withTime.filter(function(r){return r.time==='sub15';}).length;
 
   var kpis='<div class="kpis">';
-  kpis+='<div class="kpi"><span class="k-l">Cel mai cerut</span><strong class="k-v acc">'+(help.base?esc(topHelp.label):'—')+'</strong><span class="k-s">'+(help.base?'alese de '+pct(topHelp.n,help.base)+'% dintre elevii care vin cu mașina':'Încă nu avem răspunsuri.')+'</span></div>';
-  kpis+='<div class="kpi"><span class="k-l">Timp în trafic</span><strong class="k-v">'+(mean===null?'—':'≈ '+Math.round(mean)+'<small>min</small>')+'</strong><span class="k-s">în medie, într-un singur sens'+(tr.length?' ('+tr.length+' elevi)':'')+'</span></div>';
+  kpis+='<div class="kpi"><span class="k-l">Cel mai cerut</span><strong class="k-v acc">'+(help.base?esc(topHelp.label):'—')+'</strong><span class="k-s">'+(help.base?'alese de '+pct(topHelp.n,help.base)+'% dintre elevii care au răspuns':'Încă nu avem răspunsuri.')+'</span></div>';
+  kpis+='<div class="kpi"><span class="k-l">Drum scurt</span><strong class="k-v">'+(withTime.length?pct(shortTrip,withTime.length)+'<small>%</small>':'—')+'</strong><span class="k-s">fac sub 15 minute până la școală'+(withTime.length?' ('+withTime.length+' elevi)':'')+'</span></div>';
   kpis+='<div class="kpi"><span class="k-l">Autobuz și mașină</span><div class="k-duo"><div><strong class="k-v">'+pub.length+'</strong><span>elevi cu transport public ('+pct(pub.length,moving.length)+'%)</span></div><div><strong class="k-v">'+car.length+'</strong><span>elevi cu mașina ('+pct(car.length,moving.length)+'%)</span></div></div><span class="k-s">dintre '+moving.length+' elevi, cel puțin o zi pe săptămână</span></div>';
   kpis+='</div>';
 
   var full=!!o.full;   // panoul de admin: toate graficele; site-ul public: doar cele de impact
   var P=[];
-  P.push(panel('Ce i-ar ajuta pe elevi','Elevii care vin cu mașina, mai multe răspunsuri posibile · '+help.base+' elevi',barsHTML(help.items,help.base)));
+  P.push(panel('Ce i-ar ajuta pe elevi','Elevii care au răspuns, mai multe răspunsuri posibile · '+help.base+' elevi',barsHTML(help.items,help.base)));
 
-  var trf=countOpts(moving,'traffic');
-  P.push(panel('Cât stau în trafic','Estimare, într-un singur sens · '+trf.base+' elevi'+(mean===null?'':' · medie ≈ '+Math.round(mean)+' min'),barsHTML(trf.items,trf.base)+'<p class="p-foot">Media se calculează din intervale (peste 30 de minute se socotește 40). „Nu știu” nu intră în medie.</p>'));
+  var tm=countOpts(withTime,'time');
+  P.push(panel('Cât durează drumul până la școală','Estimare, într-un singur sens · '+tm.base+' elevi',barsHTML(tm.items,tm.base)+'<p class="p-foot">Elevii care fac sub 15 minute încheie chestionarul după această întrebare.</p>'));
 
   var modeItems=MODES.map(function(m){return {k:m[0],label:m[1],n:moving.filter(function(r){return r.modes[m[0]]>0;}).length};}).sort(function(a,b){return b.n-a.n;});
   var totalDays=moving.reduce(function(s,r){return s+r.days;},0);

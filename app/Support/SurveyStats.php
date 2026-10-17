@@ -10,14 +10,14 @@ class SurveyStats
     public static function labels(): array
     {
         return [
-            'status' => ['complete' => 'Complet', 'no_car' => 'Fără mașină', 'zero_days' => '0 zile la școală', 'not_student' => 'Nu e elev'],
+            'status' => ['complete' => 'Complet', 'no_car' => 'Fără mașină', 'short_trip' => 'Drum sub 15 min', 'zero_days' => '0 zile la școală', 'not_student' => 'Nu e elev/student'],
             'modes' => ['foot' => 'Pe jos', 'bike' => 'Bicicletă', 'public' => 'Transport public', 'car' => 'Mașină', 'taxi' => 'Taxi', 'other' => 'Altul'],
             'dist' => ['sub1' => 'Sub 1 km', '1-3' => '1–3 km', '3-5' => '3–5 km', '5-10' => '5–10 km', 'peste10' => 'Peste 10 km', 'nu_stiu' => 'Nu știu'],
-            'traffic' => ['deloc' => 'Aproape deloc', 'sub5' => 'Sub 5 min', '5-10' => '5–10 min', '10-20' => '10–20 min', '20-30' => '20–30 min', 'peste30' => 'Peste 30 min', 'nu_stiu' => 'Nu știu'],
+            'time' => ['sub15' => 'Sub 15 min', '15-20' => '15–20 min', '20-30' => '20–30 min', 'peste30' => 'Peste 30 min'],
             'why' => ['special' => 'Special pentru școală', 'ocol' => 'Face un ocol', 'oricum' => 'Merge oricum pe acolo', 'diferit' => 'Situații diferite', 'nu_stiu' => 'Nu știu'],
-            'shared' => ['nu' => 'Nu', 'da' => 'Da', 'uneori' => 'Uneori', 'nu_stiu' => 'Nu știu'],
-            'alt' => ['foot' => 'Pe jos', 'bike' => 'Bicicletă', 'public' => 'Transport public', 'other' => 'Altă variantă', 'niciuna' => 'Niciuna acum'],
-            'block' => ['dist' => 'Distanța', 'timp' => 'Timpul', 'legaturi' => 'Legăturile de transport', 'traseu' => 'Traseul dificil', 'orar' => 'Orarul', 'vreme' => 'Vremea', 'alt' => 'Alt motiv', 'nu_raspund' => 'Prefer să nu răspund'],
+            'shared' => ['nu' => 'Nu', 'da' => 'Da', 'uneori' => 'Uneori'],
+            'alt' => ['foot' => 'Pe jos', 'bike' => 'Bicicletă/trotinetă electrică', 'public' => 'Transport public', 'other' => 'Altă variantă', 'niciuna' => 'Niciuna acum'],
+            'block' => ['dist' => 'Distanța', 'timp' => 'Timpul', 'legaturi' => 'Legăturile de transport', 'transport' => 'Lipsa mijloacelor de transport', 'traseu' => 'Traseul dificil', 'orar' => 'Orarul', 'vreme' => 'Vremea', 'alt' => 'Alt motiv', 'nu_raspund' => 'Prefer să nu răspund'],
             'help' => ['info' => 'Informații despre transport', 'rute' => 'Rute noi de autobuz/tramvai', 'piste' => 'Piste pentru bicicletă', 'altceva' => 'Altceva'],
         ];
     }
@@ -46,15 +46,15 @@ class SurveyStats
         $a = ['student' => $r->status === 'not_student' ? 'nu' : 'da'];
         if ($r->status !== 'not_student') {
             $a['days'] = (int) $r->days;
-            if ($r->status !== 'zero_days') {
+            if ($r->time_to_school) {
+                $a['time'] = $r->time_to_school;
+            }
+            if (! in_array($r->status, ['zero_days', 'short_trip'], true)) {
                 $a['modes'] = [
                     'foot' => (int) $r->m_foot, 'bike' => (int) $r->m_bike, 'public' => (int) $r->m_public,
                     'car' => (int) $r->m_car, 'taxi' => (int) $r->m_taxi, 'other' => (int) $r->m_other,
                 ];
                 $a['dist'] = $r->dist;
-                if ($r->traffic !== null && $r->traffic !== '') {
-                    $a['traffic'] = $r->traffic;
-                }
                 if ($withText && ! empty($r->route)) {
                     $a['route'] = $r->route;
                 }
@@ -64,7 +64,10 @@ class SurveyStats
                     $a['alt'] = $r->alt;
                     $a['replace'] = (int) $r->replace_days;
                     $a['block'] = $r->block_opts ? explode(',', $r->block_opts) : [];
-                    $a['help'] = $r->help_opts ? explode(',', $r->help_opts) : [];
+                }
+                $a['help'] = $r->help_opts ? explode(',', $r->help_opts) : [];
+                if ($withText && ! empty($r->bother)) {
+                    $a['bother'] = $r->bother;
                 }
             }
         }

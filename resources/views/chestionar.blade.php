@@ -625,23 +625,25 @@ const MODES=[['foot','Pe jos'],['bike','Bicicletă'],['public','Transport public
 const carDays=a=>a.modes?a.modes.car:0;
 const hasCar=a=>carDays(a)>0;
 const Q=[
- {n:1,key:'student',rail:'Elev în Iași',title:'Ești elev la o școală sau un liceu din Iași?',type:'single',cols:2,opts:[['da','Da'],['nu','Nu']]},
+ {n:1,key:'student',rail:'Elev sau student în Iași',title:'Ești elev/student în Iași?',type:'single',cols:2,opts:[['da','Da'],['nu','Nu']]},
  {n:2,key:'days',rail:'Zile la școală',title:'În câte zile ai fost fizic la școală?',hint:'Numără zilele din ultima săptămână de școală. Dacă alegi 0, nu mai cerem detalii despre drum.',type:'chips',range:()=>[0,5],unit:'zile'},
- {n:3,key:'modes',rail:'Cum ai ajuns',title:'Cum ai ajuns dimineața la școală?',hint:'Împarte zilele din întrebarea 02 pe tipuri de drum. Totalul trebuie să fie egal cu numărul lor. Dacă ai folosit mai multe mijloace într-o zi, alege segmentul cel mai lung.',type:'modes'},
- {n:4,key:'dist',rail:'Lungimea drumului',title:'Cam cât de lung este drumul într-un singur sens?',hint:'Doar o estimare.',type:'single',opts:[['sub1','Sub 1 km'],['1-3','1–3 km'],['3-5','3–5 km'],['5-10','5–10 km'],['peste10','Peste 10 km'],['nu_stiu','Nu știu']]},
- {n:5,key:'traffic',rail:'Timp în trafic',title:'Cât timp stai de obicei în trafic, într-un singur sens?',hint:'Estimează timpul în care te deplasezi greu sau stai pe loc, inclusiv așteptarea la semafoare și în stații.',type:'single',when:a=>!!a.modes&&(a.modes.car+a.modes.public+a.modes.taxi+a.modes.other)>0,opts:[['deloc','Aproape deloc'],['sub5','Sub 5 minute'],['5-10','5–10 minute'],['10-20','10–20 minute'],['20-30','20–30 de minute'],['peste30','Peste 30 de minute'],['nu_stiu','Nu știu']]},
- {n:6,key:'route',rail:'Traseul tău',title:'Pe ce traseu mergi de obicei dimineața?',hint:'Scrie străzile sau zonele principale pe care treci, de exemplu: Podu Roș – Piața Unirii – Copou. Nu scrie adresa ta exactă de acasă.',type:'text'},
+ {n:3,key:'time',rail:'Timp până la școală',title:'Cât faci până la școală?',hint:'Timpul de acasă până la școală, într-un singur sens. Doar o estimare. Dacă faci mai puțin de 15 minute, chestionarul se încheie.',type:'single',opts:[['sub15','Sub 15 minute'],['15-20','15–20 de minute'],['20-30','20–30 de minute'],['peste30','Peste 30 de minute']]},
+ {n:4,key:'modes',rail:'Cum ai ajuns',title:'Cum ai ajuns dimineața la școală?',hint:'Împarte zilele din întrebarea 02 pe tipuri de drum. Totalul trebuie să fie egal cu numărul lor. Dacă ai folosit mai multe mijloace într-o zi, alege segmentul cel mai lung.',type:'modes'},
+ {n:5,key:'dist',rail:'Lungimea drumului',title:'Cam cât de lung este drumul într-un singur sens?',hint:'Doar o estimare.',type:'single',opts:[['sub1','Sub 1 km'],['1-3','1–3 km'],['3-5','3–5 km'],['5-10','5–10 km'],['peste10','Peste 10 km'],['nu_stiu','Nu știu']]},
+ {n:6,key:'route',rail:'Traseul tău',title:'Pe ce traseu mergi de obicei dimineața?',hint:'Scrie străzile sau zonele principale pe care treci, de exemplu: Podu Roș – Piața Unirii – Copou. Nu scrie adresa ta exactă de acasă.',type:'text',label:'Traseul tău (opțional)',placeholder:'De exemplu: Podu Roș – Piața Unirii – Copou',small:'Poți lăsa câmpul gol dacă preferi.'},
  {n:7,key:'why',rail:'De ce face șoferul drumul',title:'Dacă folosești mașina, de ce face șoferul acel drum?',hint:'Drumurile cu taxiul le analizăm separat.',type:'single',when:hasCar,opts:[['special','Special pentru școală','Altfel nu ar fi mers pe acolo'],['ocol','Face un ocol','Se abate de la drumul lui obișnuit'],['oricum','Merge oricum pe acolo','Școala e pe traseul lui'],['diferit','Situații diferite','Depinde de zi'],['nu_stiu','Nu știu']]},
- {n:8,key:'shared',rail:'Alți elevi în mașină',title:'Mai vin și alți elevi cu aceeași mașină?',type:'single',when:hasCar,opts:[['nu','Nu'],['da','Da'],['uneori','Uneori'],['nu_stiu','Nu știu']]},
- {n:9,key:'alt',rail:'Alternativă realistă',title:'Ce alternativă ai putea încerca realist?',hint:'Schimbarea se discută cu familia, când este cazul.',type:'single',when:hasCar,opts:[['foot','Pe jos'],['bike','Bicicletă'],['public','Transport public'],['other','Altă variantă'],['niciuna','Niciuna acum']]},
+ {n:8,key:'shared',rail:'Alți elevi în mașină',title:'Mai vin și alți elevi cu aceeași mașină?',type:'single',when:hasCar,opts:[['nu','Nu'],['da','Da'],['uneori','Uneori']]},
+ {n:9,key:'alt',rail:'Alternativă realistă',title:'Ce alternativă ai putea încerca realist?',hint:'Schimbarea se discută cu familia, când este cazul.',type:'single',when:hasCar,opts:[['foot','Pe jos'],['bike','Bicicletă/trotinetă electrică'],['public','Transport public'],['other','Altă variantă'],['niciuna','Niciuna acum']]},
  {n:10,key:'replace',rail:'Dimineți fără mașină',title:'Dacă ai repeta săptămâna raportată, în câte dimineți ai putea înlocui mașina?',type:'chips',range:a=>[0,carDays(a)],unit:'dimineți',when:a=>hasCar(a)&&a.alt!=='niciuna'},
- {n:11,key:'block',rail:'Ce te împiedică',title:'Ce te împiedică cel mai mult?',hint:'Alege cel mult 2 răspunsuri.',type:'multi',max:2,when:hasCar,opts:[['dist','Distanța'],['timp','Timpul'],['legaturi','Legăturile de transport'],['traseu','Traseul dificil'],['orar','Orarul'],['vreme','Vremea'],['alt','Alt motiv'],['nu_raspund','Prefer să nu răspund']]},
- {n:12,key:'help',rail:'Ce te-ar ajuta',title:'Ce te-ar ajuta?',hint:'Poți alege mai multe răspunsuri.',type:'multi',comment:true,when:hasCar,opts:[['info','Informații despre transport'],['rute','Adăugarea unor noi rute de autobuz/tramvai'],['piste','Implementarea pistelor pentru bicicletă'],['altceva','Altceva']]}
+ {n:11,key:'block',rail:'Ce te împiedică',title:'Ce te împiedică cel mai mult?',hint:'Alege cel mult 2 răspunsuri.',type:'multi',max:2,when:hasCar,opts:[['dist','Distanța'],['timp','Timpul'],['legaturi','Legăturile de transport'],['transport','Lipsa mijloacelor de transport'],['traseu','Traseul dificil'],['orar','Orarul'],['vreme','Vremea'],['alt','Alt motiv'],['nu_raspund','Prefer să nu răspund']]},
+ {n:12,key:'bother',rail:'Ce te deranjează',title:'Ce te deranjează în momentul actual la modul în care se desfășoară diminețile către școală?',hint:'Scrie pe scurt ce ți se pare cel mai greu sau neplăcut în drumul de dimineață.',type:'text',label:'Ce te deranjează (opțional)',placeholder:'De exemplu: aglomerația din autobuz, ambuteiajele, trotuarele înguste, ora de începere, vremea',small:'Poți lăsa câmpul gol dacă preferi. Nu include nume, adrese sau alte date personale.'},
+ {n:13,key:'help',rail:'Ce ar trebui îmbunătățit',title:'Ce ar trebui îmbunătățit pe traseul tău pentru a te încuraja să alegi o variantă de deplasare mai sustenabilă?',hint:'Poți alege mai multe răspunsuri.',type:'multi',comment:true,opts:[['info','Informații despre transport'],['rute','Adăugarea unor noi rute de autobuz/tramvai'],['piste','Implementarea pistelor pentru bicicletă'],['altceva','Altceva']]}
 ];
 const TEXTS={
   not_student:{t:'Mulțumim pentru răspuns!',p:'Chestionarul este pentru elevii din Iași, așa că răspunsul tău nu intră în statistica elevilor.'},
   zero_days:{t:'Mulțumim, am terminat!',p:'Fiindcă nu ai fost la școală în acea săptămână, nu mai avem nevoie de detalii despre drum.'},
-  no_car:{t:'Mulțumim, am terminat!',p:'Nu ai venit cu mașina, așa că nu mai avem alte întrebări pentru tine. Drumurile mai curate contează.'},
+  short_trip:{t:'Mulțumim, am terminat!',p:'Drumul tău până la școală este scurt, așa că nu mai avem alte întrebări pentru tine.'},
+  no_car:{t:'Mulțumim pentru răspunsuri!',p:'Ne ajută să vedem ce ar face drumurile spre școală mai curate pentru toți elevii.'},
   complete:{t:'Mulțumim pentru răspunsuri!',p:'Ne ajută să vedem ce schimbări sunt realiste pentru drumul spre școală.'}
 };
 
@@ -667,6 +669,7 @@ function endReason(){
   const q=Q[i];
   if(q.key==='student'&&a.student==='nu') return 'not_student';
   if(q.key==='days'&&a.days===0) return 'zero_days';
+  if(q.key==='time'&&a.time==='sub15') return 'short_trip';
   if(nextIdx(i)<0) return hasCar(a)?'complete':'no_car';
   return null;
 }
@@ -682,7 +685,7 @@ function bodyHTML(q){
   if(q.type==='chips'){
     const r=q.range(a); let h='';
     for(let k=r[0];k<=r[1];k++) h+='<label class="chip"><input type="radio" name="q" value="'+k+'"'+(v===k?' checked':'')+'><span>'+k+'</span></label>';
-    const note=q.key==='days'?'Zile de școală în ultima săptămână, între 0 și 5.':'Între 0 și '+r[1]+', cel mult zilele în care ai venit cu mașina (întrebarea 03). Este un scenariu pentru același program, nu o promisiune. Ceilalți elevi pot susține campania.';
+    const note=q.key==='days'?'Zile de școală în ultima săptămână, între 0 și 5.':'Între 0 și '+r[1]+', cel mult zilele în care ai venit cu mașina (întrebarea 04). Este un scenariu pentru același program, nu o promisiune. Ceilalți elevi pot susține campania.';
     return '<div class="chips" role="radiogroup" aria-labelledby="qt">'+h+'</div><p class="chip-note">'+note+'</p>';
   }
   if(q.type==='modes'){
@@ -690,7 +693,7 @@ function bodyHTML(q){
     return '<div class="modes">'+MODES.map(([k,l])=>'<div class="mode"><span class="mode-name">'+l+'</span><div class="stepper"><button type="button" data-m="'+k+'" data-d="-1" aria-label="Scade zilele: '+l+'">−</button><output id="v-'+k+'" aria-live="polite">0</output><button type="button" data-m="'+k+'" data-d="1" aria-label="Adaugă o zi: '+l+'">+</button></div></div>').join('')+'</div><p class="mtot" id="mtot" role="status"></p>';
   }
   if(q.type==='text'){
-    return '<div class="field"><label for="rt">Traseul tău (opțional)</label><textarea id="rt" rows="4" maxlength="300" placeholder="De exemplu: Podu Roș – Piața Unirii – Copou">'+esc(a.route||'')+'</textarea><small>Poți lăsa câmpul gol dacă preferi.</small></div>';
+    return '<div class="field"><label for="tx">'+q.label+'</label><textarea id="tx" rows="4" maxlength="300" placeholder="'+esc(q.placeholder)+'">'+esc(a[q.key]||'')+'</textarea><small>'+q.small+'</small></div>';
   }
   if(q.type==='multi'){
     const arr=Array.isArray(v)?v:[];
@@ -736,8 +739,8 @@ function renderRail(){
 function renderQuestion(){
   const q=Q[i];
   stage.innerHTML='<h3 class="q-title" id="qt" tabindex="-1">'+q.title+'</h3>'+(q.hint?'<p class="q-hint">'+q.hint+'</p>':'')+bodyHTML(q);
-  qidEl.textContent='Întrebarea '+pad(q.n)+' din 12';
-  meter.style.transform='scaleX('+(q.n/12)+')';
+  qidEl.textContent='Întrebarea '+pad(q.n)+' din '+Q.length;
+  meter.style.transform='scaleX('+(q.n/Q.length)+')';
   nav.hidden=false;
   if(q.type==='modes') syncModes();
   if(q.type==='multi') syncMulti(q);
@@ -852,7 +855,7 @@ stage.addEventListener('change',e=>{
   }
   updateNav();
 });
-stage.addEventListener('input',e=>{ if(e.target.id==='cm') a.comment=e.target.value.slice(0,300); if(e.target.id==='rt') a.route=e.target.value.slice(0,300); });
+stage.addEventListener('input',e=>{ if(e.target.id==='cm') a.comment=e.target.value.slice(0,300); if(e.target.id==='tx') a[Q[i].key]=e.target.value.slice(0,300); });
 
 /* ---------- Statistici și hartă ---------- */
 const stBody=$('#stBody'), stNote=$('#stNote'), mpBody=$('#mpBody'), mpNote=$('#mpNote');

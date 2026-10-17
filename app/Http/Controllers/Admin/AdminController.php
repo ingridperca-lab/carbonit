@@ -62,7 +62,7 @@ class AdminController extends Controller
 
     public function dashboard(): View
     {
-        $byStatus = ['complete' => 0, 'no_car' => 0, 'zero_days' => 0, 'not_student' => 0];
+        $byStatus = ['complete' => 0, 'no_car' => 0, 'short_trip' => 0, 'zero_days' => 0, 'not_student' => 0];
         foreach (SurveyResponse::selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status') as $s => $c) {
             $byStatus[$s] = (int) $c;
         }
@@ -80,11 +80,12 @@ class AdminController extends Controller
         return view('admin.dashboard', [
             'total' => array_sum($byStatus),
             'byStatus' => $byStatus,
-            'students' => $byStatus['complete'] + $byStatus['no_car'] + $byStatus['zero_days'],
+            'students' => $byStatus['complete'] + $byStatus['no_car'] + $byStatus['short_trip'] + $byStatus['zero_days'],
             'last24' => SurveyResponse::where('created_at', '>=', now()->subDay())->count(),
             'lastAt' => SurveyResponse::max('created_at'),
             'days' => $days,
             'maxDay' => max(1, max($days)),
+            'bothers' => SurveyResponse::whereNotNull('bother')->where('bother', '<>', '')->orderByDesc('id')->limit(15)->get(['created_at', 'bother']),
             'comments' => SurveyResponse::whereNotNull('comment')->where('comment', '<>', '')->orderByDesc('id')->limit(15)->get(['created_at', 'comment']),
         ]);
     }
@@ -97,7 +98,7 @@ class AdminController extends Controller
 
     public function responses(Request $request): View
     {
-        $statuses = ['' => 'Toate', 'complete' => 'Complete', 'no_car' => 'Fără mașină', 'zero_days' => '0 zile la școală', 'not_student' => 'Nu sunt elevi'];
+        $statuses = ['' => 'Toate', 'complete' => 'Complete', 'no_car' => 'Fără mașină', 'short_trip' => 'Drum sub 15 min', 'zero_days' => '0 zile la școală', 'not_student' => 'Nu sunt elevi/studenți'];
         $status = (string) $request->query('status', '');
         if (! isset($statuses[$status])) {
             $status = '';
@@ -110,7 +111,7 @@ class AdminController extends Controller
             ->when($onlyComments, fn ($w) => $w->whereNotNull('comment')->where('comment', '<>', ''))
             ->when($q !== '', function ($w) use ($q) {
                 $like = '%'.addcslashes($q, '\\%_').'%';
-                $w->where(fn ($x) => $x->where('route', 'like', $like)->orWhere('comment', 'like', $like));
+                $w->where(fn ($x) => $x->where('route', 'like', $like)->orWhere('comment', 'like', $like)->orWhere('bother', 'like', $like));
             })
             ->orderByDesc('id');
 
