@@ -86,6 +86,8 @@ class SurveyController extends Controller
             Zones::counts((clone $students)->whereNotNull('route')->pluck('route'), self::MIN_ZONE_RESPONSES),
         );
 
+        $co2 = $this->co2Summary();
+
         return $this->json([
             'ok' => true,
             'updatedAt' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
@@ -95,7 +97,47 @@ class SurveyController extends Controller
             'travelTime' => $travelTime,
             'help' => $help,
             'zones' => $zones,
+            'co2' => $co2,
         ])->header('Cache-Control', 'public, max-age=30');
+    }
+
+    /**
+     * Emisii estimate pentru o săptămână raportată (până la 5 zile de școală), pe baza mijlocului de transport
+     * și a mijlocului intervalului de distanță. Răspunsurile fără distanță cunoscută sunt excluse.
+     */
+    private function co2Summary(): array
+    {
+        $factors = config('co2.factors');
+        $distances = config('co2.distance_km');
+        $legs = (int) config('co2.legs_per_day');
+
+        $total = 0.0;
+        $included = 0;
+        $excluded = 0;
+        $rows = SurveyResponse::where('in_stats', true)->whereNotNull('m_foot')
+            ->get(['dist', 'm_foot', 'm_bike', 'm_public', 'm_car', 'm_taxi', 'm_other']);
+        foreach ($rows as $r) {
+            $km = $distances[$r->dist] ?? null;
+            if ($km === null) {
+                $excluded++;
+
+                continue;
+            }
+            foreach ($factors as $mode => $factor) {
+                $total += (int) $r->{'m_'.$mode} * $legs * $km * $factor;
+            }
+            $included++;
+        }
+
+        return [
+            'totalKg5Days' => round($total, 1),
+            'averageKg5Days' => $included ? round($total / $included, 2) : 0,
+            'includedResponses' => $included,
+            'excludedResponses' => $excluded,
+            'unit' => 'kgCO2e',
+            'period' => '5 school days',
+            'method' => config('co2.method'),
+        ];
     }
 
     private function json(array $data, int $status = 200): JsonResponse
