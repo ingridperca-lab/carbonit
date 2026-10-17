@@ -15,10 +15,15 @@
 
 - name: Deploy pe server
   hosts: web
-  vars:
-    release: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
-    release_dir: "{{ app_releases }}/{{ release }}"
   tasks:
+    - name: Numele release-ului (calculat o singură dată)
+      ansible.builtin.set_fact:
+        release: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+    - name: Calea release-ului
+      ansible.builtin.set_fact:
+        release_dir: "{{ app_releases }}/{{ release }}"
+
     - name: Director release
       ansible.builtin.file: {path: "{{ release_dir }}", state: directory, mode: "0755"}
 
