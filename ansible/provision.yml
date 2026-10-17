@@ -1,0 +1,215 @@
+---
+# Pregătește serverul: pachete, PHP, MySQL, nginx, firewall, SSL (Let's Encrypt), structura de directoare.
+# Rulare: ansible-playbook provision.yml
+- name: Provision server Carbonit
+  hosts: web
+  become: true
+  tasks:
+    - name: Verificare sistem
+      ansible.builtin.assert:
+        that: ansible_facts["distribution"] == 'Ubuntu'
+        fail_msg: "Playbook-ul este scris pentru Ubuntu."
+
+    - name: Pachete de bază
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, unzip, git, rsync, ufw, acl, python3-pymysql, nginx, certbot, mysql-server, composer]
+        update_cache: true
+        cache_valid_time: 3600
+        state: present
+
+    - name: Fus orar
+      community.general.timezone:
+        name: Europe/Bucharest
+
+    - name: Swap de 1 GB (dacă serverul are puțină memorie)
+      when: ansible_facts["memtotal_mb"] < 2048 and ansible_facts["swaptotal_mb"] == 0
+      block:
+        - name: Creează fișierul swap
+          ansible.builtin.command: fallocate -l 1G /swapfile
+          args: {creates: /swapfile}
+        - name: Permisiuni swap
+          ansible.builtin.file: {path: /swapfile, mode: "0600"}
+        - name: Formatează swap
+          ansible.builtin.command: mkswap /swapfile
+          when: ansible_facts["swaptotal_mb"] == 0
+        - name: Activează swap
+          ansible.builtin.command: swapon /swapfile
+          when: ansible_facts["swaptotal_mb"] == 0
+        - name: Swap permanent
+          ansible.posix.mount: {path: none, src: /swapfile, fstype: swap, opts: sw, state: present}
+
+    - name: PHP {{ php_version }}
+      ansible.builtin.apt:
+        name: "{{ ['php' ~ php_version] + (php_packages | map('regex_replace', '^', 'php' ~ php_version ~ '-') | list) }}"
+        update_cache: true
+        state: present
+      notify: Restart php-fpm
+
+    - name: Setări PHP (fpm)
+      ansible.builtin.copy:
+        dest: "/etc/php/{{ php_version }}/fpm/conf.d/99-carbonit.ini"
+        content: |
+          expose_php = Off
+          memory_limit = 256M
+          upload_max_filesize = 2M
+          post_max_size = 2M
+          opcache.enable = 1
+          opcache.validate_timestamps = 0
+        mode: "0644"
+      notify: Restart php-fpm
+
+    - name: Composer folosește PHP {{ php_version }}
+      ansible.builtin.alternatives:
+        name: php
+        path: "/usr/bin/php{{ php_version }}"
+
+    - name: MySQL pornit
+      ansible.builtin.service: {name: mysql, state: started, enabled: true}
+
+    - name: Baza de date
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        encoding: utf8mb4
+        collation: utf8mb4_unicode_ci
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+
+    - name: Utilizator MySQL (doar local)
+      community.mysql.mysql_user:
+        name: "{{ db_user }}"
+        plugin: caching_sha2_password
+        plugin_auth_string: "{{ db_password }}"
+        host: localhost
+        priv: "{{ db_name }}.*:ALL"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        state: present
+      no_log: true
+
+    - name: Directoare aplicație
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        group: www-data
+        mode: "{{ item.mode }}"
+      loop:
+        - {path: "{{ app_root }}", owner: ubuntu, mode: "0755"}
+        - {path: "{{ app_releases }}", owner: ubuntu, mode: "0755"}
+        - {path: "{{ app_shared }}", owner: ubuntu, mode: "0755"}
+        - {path: "{{ app_shared }}/storage", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/app", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/app/public", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/framework", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/framework/cache", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/framework/sessions", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/framework/views", owner: www-data, mode: "2775"}
+        - {path: "{{ app_shared }}/storage/logs", owner: www-data, mode: "2775"}
+        - {path: /var/www/letsencrypt, owner: root, mode: "0755"}
+
+    - name: Fișierul .env există deja?
+      ansible.builtin.stat:
+        path: "{{ app_shared }}/.env"
+      register: env_file
+
+    - name: Hash pentru parola de admin (bcrypt, calculat pe server)
+      ansible.builtin.command: php -r 'echo password_hash(trim(fgets(STDIN)), PASSWORD_BCRYPT);'
+      args:
+        stdin: "{{ admin_password }}"
+      register: admin_hash
+      changed_when: false
+      no_log: true
+      when: not env_file.stat.exists
+
+    - name: Scrie .env (doar la prima rulare; ulterior nu se suprascrie)
+      ansible.builtin.template:
+        src: env.j2
+        dest: "{{ app_shared }}/.env"
+        owner: ubuntu
+        group: www-data
+        mode: "0640"
+        force: false
+      vars:
+        admin_password_hash: "{{ admin_hash.stdout | default('') }}"
+      no_log: true
+
+    - name: Firewall - SSH, HTTP, HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: ["22", "80", "443"]
+
+    - name: Firewall activ
+      community.general.ufw: {state: enabled, policy: deny}
+
+    - name: Ascunde versiunea nginx
+      ansible.builtin.lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: '^\s*#?\s*server_tokens'
+        line: '        server_tokens off;'
+        insertafter: '^\s*http \{'
+      notify: Reload nginx
+
+    - name: Șterge site-ul implicit nginx
+      ansible.builtin.file: {path: /etc/nginx/sites-enabled/default, state: absent}
+      notify: Reload nginx
+
+    - name: Există certificatul Let's Encrypt?
+      ansible.builtin.stat:
+        path: "/etc/letsencrypt/live/{{ app_domain }}/fullchain.pem"
+      register: cert
+
+    - name: Configurare nginx (HTTP sau HTTP+HTTPS, după caz)
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/carbonit
+        mode: "0644"
+      vars:
+        cert_exists: "{{ cert.stat.exists }}"
+      notify: Reload nginx
+
+    - name: Activează site-ul
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/carbonit
+        dest: /etc/nginx/sites-enabled/carbonit
+        state: link
+      notify: Reload nginx
+
+    - name: Testează configurarea nginx
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Aplică nginx acum (necesar pentru validarea Let's Encrypt)
+      ansible.builtin.meta: flush_handlers
+
+    - name: Emite certificatul Let's Encrypt (ambele domenii)
+      ansible.builtin.command: >
+        certbot certonly --webroot -w /var/www/letsencrypt
+        -d {{ app_domain }} -d {{ admin_domain }}
+        --non-interactive --agree-tos -m {{ letsencrypt_email }}
+        --deploy-hook "systemctl reload nginx"
+      args:
+        creates: "/etc/letsencrypt/live/{{ app_domain }}/fullchain.pem"
+
+    - name: Verifică din nou certificatul
+      ansible.builtin.stat:
+        path: "/etc/letsencrypt/live/{{ app_domain }}/fullchain.pem"
+      register: cert
+
+    - name: Configurare nginx finală cu HTTPS
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/carbonit
+        mode: "0644"
+      vars:
+        cert_exists: "{{ cert.stat.exists }}"
+      notify: Reload nginx
+
+    - name: Reînnoire automată certificat (timer certbot)
+      ansible.builtin.systemd: {name: certbot.timer, enabled: true, state: started}
+
+  handlers:
+    - name: Restart php-fpm
+      ansible.builtin.service: {name: "php{{ php_version }}-fpm", state: restarted, enabled: true}
+    - name: Reload nginx
+      ansible.builtin.service: {name: nginx, state: reloaded, enabled: true}

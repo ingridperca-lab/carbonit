@@ -1,0 +1,34 @@
+---
+app_name: carbonit
+app_domain: carbonit.datastream.ro
+admin_domain: carbonit-admin.datastream.ro
+letsencrypt_email: ingrid.perca@gmail.com
+
+app_root: /var/www/carbonit
+app_releases: "{{ app_root }}/releases"
+app_shared: "{{ app_root }}/shared"
+app_current: "{{ app_root }}/current"
+keep_releases: 5
+
+php_version: "8.5"
+php_packages:
+  - cli
+  - fpm
+  - mysql
+  - mbstring
+  - xml
+  - curl
+  - zip
+  - intl
+  - bcmath
+  - gd
+
+db_name: carbonit
+db_user: carbonit
+# Parolele se generează o singură dată și se țin local în ansible/secrets/ (ignorat de git).
+db_password: "{{ lookup('ansible.builtin.password', playbook_dir + '/secrets/db_password length=32 chars=ascii_letters,digits') }}"
+app_key_raw: "{{ lookup('ansible.builtin.password', playbook_dir + '/secrets/app_key length=32 chars=ascii_letters,digits') }}"
+admin_user: admin
+admin_password: "{{ lookup('ansible.builtin.password', playbook_dir + '/secrets/admin_password length=20 chars=ascii_letters,digits') }}"
+
+project_dir: "{{ playbook_dir }}/.."

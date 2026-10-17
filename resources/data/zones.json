@@ -1,0 +1,259 @@
+[
+ {
+  "id": "copou",
+  "name": "Copou",
+  "lat": 47.179,
+  "lng": 27.568,
+  "r": 550,
+  "aliases": [
+   "copou",
+   "universitate",
+   "universitatea",
+   "parcul copou"
+  ]
+ },
+ {
+  "id": "centru",
+  "name": "Centru / Piața Unirii",
+  "lat": 47.1625,
+  "lng": 27.5875,
+  "r": 450,
+  "aliases": [
+   "centru",
+   "centrul",
+   "unirii",
+   "piata unirii",
+   "stefan cel mare"
+  ]
+ },
+ {
+  "id": "palas",
+  "name": "Palas",
+  "lat": 47.1565,
+  "lng": 27.5865,
+  "r": 380,
+  "aliases": [
+   "palas",
+   "palatul culturii"
+  ]
+ },
+ {
+  "id": "gara",
+  "name": "Gara Iași",
+  "lat": 47.1658,
+  "lng": 27.5765,
+  "r": 400,
+  "aliases": [
+   "gara",
+   "garii",
+   "gara iasi"
+  ]
+ },
+ {
+  "id": "pacurari",
+  "name": "Păcurari",
+  "lat": 47.179,
+  "lng": 27.55,
+  "r": 600,
+  "aliases": [
+   "pacurari"
+  ]
+ },
+ {
+  "id": "tatarasi",
+  "name": "Tătărași",
+  "lat": 47.1565,
+  "lng": 27.618,
+  "r": 700,
+  "aliases": [
+   "tatarasi",
+   "iulius",
+   "cantemir"
+  ]
+ },
+ {
+  "id": "podu_ros",
+  "name": "Podu Roș",
+  "lat": 47.159,
+  "lng": 27.5985,
+  "r": 420,
+  "aliases": [
+   "podu ros",
+   "podul ros",
+   "podu rosu"
+  ]
+ },
+ {
+  "id": "dacia",
+  "name": "Dacia",
+  "lat": 47.1665,
+  "lng": 27.633,
+  "r": 600,
+  "aliases": [
+   "dacia",
+   "cartierul dacia"
+  ]
+ },
+ {
+  "id": "frumoasa",
+  "name": "Frumoasa",
+  "lat": 47.173,
+  "lng": 27.606,
+  "r": 500,
+  "aliases": [
+   "frumoasa"
+  ]
+ },
+ {
+  "id": "ciric",
+  "name": "Ciric",
+  "lat": 47.186,
+  "lng": 27.623,
+  "r": 550,
+  "aliases": [
+   "ciric"
+  ]
+ },
+ {
+  "id": "galata",
+  "name": "Galata",
+  "lat": 47.148,
+  "lng": 27.627,
+  "r": 600,
+  "aliases": [
+   "galata"
+  ]
+ },
+ {
+  "id": "cetatuia",
+  "name": "Cetățuia",
+  "lat": 47.1495,
+  "lng": 27.6045,
+  "r": 500,
+  "aliases": [
+   "cetatuia"
+  ]
+ },
+ {
+  "id": "nicolina",
+  "name": "Nicolina",
+  "lat": 47.147,
+  "lng": 27.577,
+  "r": 600,
+  "aliases": [
+   "nicolina"
+  ]
+ },
+ {
+  "id": "acb",
+  "name": "Alexandru cel Bun",
+  "lat": 47.1465,
+  "lng": 27.5935,
+  "r": 550,
+  "aliases": [
+   "alexandru cel bun",
+   "acb"
+  ]
+ },
+ {
+  "id": "tudor",
+  "name": "Tudor Vladimirescu",
+  "lat": 47.153,
+  "lng": 27.557,
+  "r": 600,
+  "aliases": [
+   "tudor vladimirescu",
+   "tudor"
+  ]
+ },
+ {
+  "id": "bucium",
+  "name": "Bucium",
+  "lat": 47.1167,
+  "lng": 27.6333,
+  "r": 800,
+  "aliases": [
+   "bucium"
+  ]
+ },
+ {
+  "id": "miroslava",
+  "name": "Miroslava",
+  "lat": 47.15,
+  "lng": 27.517,
+  "r": 800,
+  "aliases": [
+   "miroslava"
+  ]
+ },
+ {
+  "id": "valea_adanca",
+  "name": "Valea Adâncă",
+  "lat": 47.1333,
+  "lng": 27.5333,
+  "r": 700,
+  "aliases": [
+   "valea adanca"
+  ]
+ },
+ {
+  "id": "cornesti",
+  "name": "Cornești",
+  "lat": 47.1167,
+  "lng": 27.5,
+  "r": 700,
+  "aliases": [
+   "cornesti"
+  ]
+ },
+ {
+  "id": "tomesti",
+  "name": "Tomești",
+  "lat": 47.1167,
+  "lng": 27.6833,
+  "r": 800,
+  "aliases": [
+   "tomesti"
+  ]
+ },
+ {
+  "id": "holboca",
+  "name": "Holboca",
+  "lat": 47.1541,
+  "lng": 27.6862,
+  "r": 800,
+  "aliases": [
+   "holboca"
+  ]
+ },
+ {
+  "id": "dancu",
+  "name": "Dancu",
+  "lat": 47.1533,
+  "lng": 27.6608,
+  "r": 600,
+  "aliases": [
+   "dancu"
+  ]
+ },
+ {
+  "id": "breazu",
+  "name": "Breazu",
+  "lat": 47.2167,
+  "lng": 27.5167,
+  "r": 700,
+  "aliases": [
+   "breazu"
+  ]
+ },
+ {
+  "id": "aroneanu",
+  "name": "Aroneanu",
+  "lat": 47.2,
+  "lng": 27.6,
+  "r": 700,
+  "aliases": [
+   "aroneanu"
+  ]
+ }
+]

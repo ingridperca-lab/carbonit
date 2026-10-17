@@ -1,0 +1,119 @@
+---
+# Compilează local (fără node pe server) și publică o versiune nouă (release) pe server.
+# Rulare: ansible-playbook deploy.yml
+- name: Build local
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: npm ci (în containerul Sail)
+      ansible.builtin.command: ./vendor/bin/sail npm ci
+      args: {chdir: "{{ project_dir }}"}
+    - name: npm run build (Vite)
+      ansible.builtin.command: ./vendor/bin/sail npm run build
+      args: {chdir: "{{ project_dir }}"}
+
+- name: Deploy pe server
+  hosts: web
+  vars:
+    release: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+    release_dir: "{{ app_releases }}/{{ release }}"
+  tasks:
+    - name: Director release
+      ansible.builtin.file: {path: "{{ release_dir }}", state: directory, mode: "0755"}
+
+    - name: Copiază codul (fără .git, vendor, node_modules, .env, storage, ansible)
+      ansible.posix.synchronize:
+        src: "{{ project_dir }}/"
+        dest: "{{ release_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=/ansible"
+          - "--exclude=/vendor"
+          - "--exclude=/node_modules"
+          - "--exclude=/.env*"
+          - "--exclude=/storage/*"
+          - "--exclude=/tests"
+          - "--exclude=/index.html"
+          - "--exclude=/routes.geojson"
+          - "--exclude=/public/hot"
+          - "--exclude=/resources/amprenta-site.zip*"
+          - "--exclude=*.log"
+
+    - name: Director bootstrap/cache
+      ansible.builtin.file: {path: "{{ release_dir }}/bootstrap/cache", state: directory, mode: "0755"}
+
+    - name: Elimină storage din release (se înlocuiește cu legătura către cel comun)
+      ansible.builtin.file: {path: "{{ release_dir }}/storage", state: absent}
+
+    - name: Legături către fișierele comune (.env, storage)
+      ansible.builtin.file:
+        src: "{{ item.src }}"
+        dest: "{{ release_dir }}/{{ item.dest }}"
+        state: link
+        force: true
+      loop:
+        - {src: "{{ app_shared }}/.env", dest: .env}
+        - {src: "{{ app_shared }}/storage", dest: storage}
+
+    - name: Proprietar www-data pe release
+      ansible.builtin.file:
+        path: "{{ release_dir }}"
+        owner: www-data
+        group: www-data
+        recurse: true
+        follow: false
+      become: true
+
+    - name: Composer install (fără pachete de dezvoltare)
+      ansible.builtin.command: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+      args: {chdir: "{{ release_dir }}"}
+      environment: {COMPOSER_HOME: /tmp/composer-www-data}
+      become: true
+      become_user: www-data
+
+    - name: Migrări
+      ansible.builtin.command: php artisan migrate --force
+      args: {chdir: "{{ release_dir }}"}
+      become: true
+      become_user: www-data
+      run_once: true
+
+    - name: Cache (config, rute, view-uri)
+      ansible.builtin.command: "php artisan {{ item }}"
+      args: {chdir: "{{ release_dir }}"}
+      loop: [config:cache, route:cache, view:cache]
+      become: true
+      become_user: www-data
+
+    - name: Activează release-ul (schimbă legătura current)
+      ansible.builtin.file:
+        src: "{{ release_dir }}"
+        dest: "{{ app_current }}"
+        state: link
+        force: true
+
+    - name: Reîncarcă PHP-FPM (golește opcache)
+      ansible.builtin.service: {name: "php{{ php_version }}-fpm", state: reloaded}
+      become: true
+
+    - name: Release-uri existente
+      ansible.builtin.find: {paths: "{{ app_releases }}", file_type: directory}
+      register: releases
+
+    - name: Șterge release-urile vechi (păstrează ultimele {{ keep_releases }})
+      ansible.builtin.file: {path: "{{ item.path }}", state: absent}
+      loop: "{{ (releases.files | sort(attribute='path'))[:-keep_releases] }}"
+      loop_control: {label: "{{ item.path }}"}
+      become: true
+
+    - name: Verificare finală (HTTPS)
+      ansible.builtin.uri:
+        url: "https://{{ item }}/{{ 'login' if 'admin' in item else '' }}"
+        status_code: 200
+        validate_certs: true
+      loop: ["{{ app_domain }}", "{{ admin_domain }}"]
+      delegate_to: localhost
+      retries: 3
+      delay: 3
