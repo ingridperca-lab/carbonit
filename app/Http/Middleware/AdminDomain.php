@@ -13,6 +13,8 @@ class AdminDomain
     public function handle(Request $request, Closure $next): Response
     {
         URL::defaults(['adminHost' => $request->route('adminHost')]);
+        // Parametrul de domeniu nu trebuie să ajungă ca argument în controllere.
+        $request->route()->forgetParameter('adminHost');
 
         return $next($request);
     }
