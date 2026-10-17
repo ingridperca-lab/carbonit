@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Chestionarul public este anonim și trimite JSON fără token CSRF.
         $middleware->preventRequestForgery(except: ['api/submit']);
+        $middleware->append(\App\Http\Middleware\FrameOptions::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
