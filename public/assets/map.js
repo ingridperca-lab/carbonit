@@ -42,7 +42,7 @@ function mount(host,opts){
     +'<div class="m-tip" role="status" hidden></div>'
     +'<div class="m-ctl"><button type="button" class="m-btn" data-z="1" aria-label="Mărește harta">+</button><button type="button" class="m-btn" data-z="-1" aria-label="Micșorează harta">−</button></div>'
     +(zones.length?'':'<p class="m-empty">Încă nu avem destule trasee ca să colorăm harta.</p>')
-    +'<p class="m-attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a></p>'
+    +'<p class="m-attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>'
     +'</div>'
     +'<div class="m-legend"><span>Mai rar frecventat</span><i class="m-grad" aria-hidden="true"></i><span>Mai aglomerat</span></div>'
     +'<p class="m-help">Mărește cu butoanele + și −, cu dublu clic sau cu două degete. Trage harta ca să o muți.</p>'
@@ -94,9 +94,9 @@ function mount(host,opts){
     c.x=L.x1-L.x0<=W?(L.x0+L.x1)/2:clamp(c.x,L.x0+W/2,L.x1-W/2);
     c.y=L.y1-L.y0<=H?(L.y0+L.y1)/2:clamp(c.y,L.y0+H/2,L.y1-H/2);
   }
+  /* Dale OpenStreetMap (CARTO cere acum cheie API). Pe tema închisă sunt inversate din CSS. */
   function tileUrl(tx,ty){
-    var style=isDark()?'dark_all':'light_all', sub='abcd'.charAt((tx+ty)&3), r=(window.devicePixelRatio||1)>1.4?'@2x':'';
-    return 'https://'+sub+'.basemaps.cartocdn.com/'+style+'/'+z+'/'+tx+'/'+ty+r+'.png';
+    return 'https://tile.openstreetmap.org/'+z+'/'+tx+'/'+ty+'.png';
   }
   function draw(){
     if(!W||!H) return;

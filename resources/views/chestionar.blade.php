@@ -5,11 +5,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>CarbonIt Movement · Iași</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Chestionar anonim despre cum ajung elevii din Iași dimineața la școală și ce amprentă de dioxid de carbon lasă drumul.">
+<meta name="description" content="Cât CO₂ lasă drumul spre școală? Chestionar anonim pentru elevii din Iași, statistici, harta zonelor aglomerate și Green Map, planificatorul de rute verzi.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400..700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 /* Concept: un "amprenta" din inele concentrice (amprentă și urmă de carbon) în spatele unui hero care glisează;
    sub el, un chestionar cu o singură întrebare pe ecran și o listă laterală cu numerele reale ale întrebărilor. */
@@ -42,15 +42,17 @@ button{font:inherit;color:inherit}
 .wrap{width:100%;max-width:1180px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 /* ---------- Header ---------- */
-.site-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:31;background:var(--bg);border-bottom:1px solid var(--line)}
+.site-header{position:sticky;top:env(safe-area-inset-top,0px);z-index:1001;background:var(--bg);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:24px;height:64px}
-.brand{display:flex;align-items:center;gap:10px;font:700 1.15rem/1 var(--font-display);letter-spacing:-.02em;text-decoration:none}
+.brand{display:flex;flex:none;align-items:center;gap:10px;font:700 1.15rem/1 var(--font-display);letter-spacing:-.02em;text-decoration:none}
 .brand svg{width:26px;height:26px;color:var(--accent)}
-.bar nav{margin-left:auto;display:flex;gap:28px;font-size:.95rem}
-.bar nav a{position:relative;padding:8px 0;text-decoration:none;color:var(--muted);transition:color .2s}
+.bar nav{margin-left:auto;display:flex;gap:28px;min-width:0;overflow-x:auto;scrollbar-width:none;font-size:.95rem}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{position:relative;flex:none;padding:8px 0;white-space:nowrap;text-decoration:none;color:var(--muted);transition:color .2s}
 .bar nav a:hover,.bar nav a[aria-current="true"]{color:var(--fg)}
 .bar nav a::after{content:"";position:absolute;left:0;right:0;bottom:2px;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
 .bar nav a[aria-current="true"]::after{transform:scaleX(1)}
+.bar>.btn{flex:none}
 .show-s{display:none}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.6em;padding:.85em 1.5em;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);font-weight:600;font-size:.98rem;line-height:1.1;text-decoration:none;cursor:pointer;transition:transform .2s,opacity .2s,background .2s,border-color .2s}
@@ -88,7 +90,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 
 .hero-ctl{position:absolute;z-index:2;left:0;right:0;bottom:28px}
 .ctl-row{display:flex;align-items:center;gap:20px}
-.cnt{font:500 .82rem/1 var(--font-mono);letter-spacing:.1em;color:var(--muted);font-variant-numeric:tabular-nums}
+.cnt{font:500 .82rem/1 var(--font-mono);letter-spacing:.1em;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .segs{display:flex;gap:8px}
 .seg{position:relative;width:64px;height:20px;padding:0;border:0;background:none;cursor:pointer}
 .seg::before,.seg i{content:"";position:absolute;left:0;right:0;top:9px;height:2px}
@@ -189,7 +191,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 @media (max-width:720px){
   .bar{gap:14px}
   .brand span{display:none}
-  .bar nav{gap:20px;font-size:.93rem}
+  .bar nav{gap:18px;font-size:.93rem}
   .hide-s{display:none}
   .show-s{display:inline}
   #print{width:100%;opacity:.4;-webkit-mask-image:none;mask-image:none}
@@ -215,6 +217,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 .k-l{font:500 .76rem/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .k-v{display:block;font:700 clamp(1.7rem,3.2vw,2.7rem)/1.05 var(--font-display);letter-spacing:-.03em;text-wrap:balance}
 .k-v.acc{color:var(--accent)}
+.k-v.heat{color:var(--heat)}
 .k-v small{margin-left:.25em;font-size:.42em;font-weight:600;letter-spacing:0;color:var(--muted)}
 .k-s{color:var(--muted);font-size:.95rem}
 .k-duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
@@ -241,6 +244,9 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 .bars li.lead .b-fill{background:var(--accent)}
 .bars li.lead .b-l{font-weight:600}
 .empty{margin:0;color:var(--muted)}
+.co2{margin-top:48px}
+.co2-h{margin:0;font:600 1.3rem/1.2 var(--font-display);letter-spacing:-.02em}
+.co2 .kpis{margin-top:20px}
 @media (max-width:900px){
   .panels{grid-template-columns:minmax(0,1fr)}
   .panel.wide .bars{grid-template-columns:minmax(0,1fr)}
@@ -289,6 +295,59 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 .m-rn{flex:1;min-width:0}
 .m-rv{flex:none;font:500 .88rem/1.5 var(--font-mono);color:var(--muted)}
 @media (max-width:720px){.m-rank{grid-template-columns:minmax(0,1fr)}.m-view{height:clamp(340px,60vh,520px)}}
+/* Dalele OpenStreetMap sunt doar deschise; pe tema închisă le inversăm. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .m-tiles,:root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+}
+:root[data-theme="dark"] .m-tiles,:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
+
+/* ---------- Green Map (planificator de rute) ---------- */
+.routes{background:var(--surface);border-top:1px solid var(--line);padding-block:clamp(56px,9vw,120px);scroll-margin-top:64px}
+.gm-grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);grid-template-areas:"ctl map" "ctl steps";gap:28px clamp(24px,4vw,48px);margin-top:40px;align-items:start}
+.gm-ctl{grid-area:ctl;min-width:0}
+.gm-map{grid-area:map;min-width:0}
+.gm-steps{grid-area:steps;min-width:0}
+.gm-ctl label{display:block;margin:0 0 8px;font-weight:600;font-size:.95rem}
+.gm-ctl label+select{margin-bottom:18px}
+.gm-ctl select{width:100%;min-height:46px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:.98rem;cursor:pointer}
+.gm-btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.gm-btns .btn{width:100%;padding-inline:1em}
+.gm-btns #calculate{grid-column:1/-1}
+.gm-status{margin:18px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:.93rem}
+.gm-res{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.gm-res>div{display:grid;gap:10px;min-width:0;padding:16px 10px 16px 0}
+.gm-res>div+div{border-left:1px solid var(--line);padding-left:12px}
+.gm-res strong{font:700 1.35rem/1.1 var(--font-display);letter-spacing:-.02em;overflow-wrap:anywhere}
+.gm-res #co2{color:var(--heat)}
+.gm-card{margin-top:18px;display:grid;gap:6px}
+.gm-card strong{font:600 1.05rem/1.3 var(--font-display)}
+.gm-card p{margin:0;color:var(--muted);font-size:.92rem}
+.gm-card p.gm-car{margin-top:8px;padding:12px 14px;border-left:3px solid var(--heat);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--heat) 9%,var(--surface));color:var(--fg)}
+.gm-note{margin:18px 0 0;color:var(--muted);font-size:.85rem}
+#map{width:100%;height:clamp(400px,66vh,600px);border:1px solid var(--line);border-radius:12px;overflow:hidden;isolation:isolate;background:color-mix(in srgb,var(--line) 55%,var(--surface))}
+.gm-legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font:500 .74rem/1.4 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.gm-legend span{display:inline-flex;align-items:center;gap:7px}
+.gm-legend i{width:12px;height:12px;border-radius:50%}
+.gm-steps h3{margin:0 0 12px;font:600 1.15rem/1.2 var(--font-display);letter-spacing:-.01em}
+.gm-steps ol{max-height:280px;overflow-y:auto;margin:0;padding:0 0 0 1.4em;color:var(--muted);font-size:.93rem}
+.gm-steps li+li{margin-top:6px}
+.cmp{margin-top:clamp(48px,7vw,88px);padding-top:18px;border-top:2px solid var(--fg)}
+.cmp h3{margin:0;font:600 1.3rem/1.2 var(--font-display);letter-spacing:-.02em}
+.cmp .bars{max-width:46rem}
+.cmp .b-fill{background:var(--accent)}
+.cmp li.car .b-fill{background:var(--heat)}
+.cmp li.car .b-l{font-weight:600}
+.cmp .p-foot{max-width:46rem}
+.leaflet-container{font-family:var(--font-body);background:color-mix(in srgb,var(--line) 55%,var(--surface))}
+.leaflet-bar a{background:var(--surface);color:var(--fg);border-bottom-color:var(--line)}
+.leaflet-bar a:hover,.leaflet-bar a:focus{background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--fg)}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--surface);color:var(--fg)}
+.leaflet-container .leaflet-control-attribution{background:color-mix(in srgb,var(--surface) 82%,transparent);color:var(--muted)}
+.leaflet-container .leaflet-control-attribution a{color:inherit}
+@media (max-width:900px){
+  .gm-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"map" "ctl" "steps"}
+  #map{height:clamp(340px,58vh,520px)}
+}
 
 /* ---------- Despre noi ---------- */
 .about{position:relative;overflow:hidden;border-top:1px solid var(--line);padding-block:clamp(64px,10vw,130px);scroll-margin-top:64px}
@@ -318,9 +377,10 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
       <span>CarbonIt Movement</span>
     </a>
     <nav aria-label="Principal">
-      <a href="#acasa">Acasă</a>
+      <a href="#acasa" class="hide-s">Acasă</a>
       <a href="#statistici">Statistici</a>
       <a href="#harta">Harta</a>
+      <a href="#rute"><span class="hide-s">Rute verzi</span><span class="show-s">Rute</span></a>
     </nav>
     <a class="btn btn-small" href="#chestionar"><span class="hide-s">Completează chestionarul</span><span class="show-s">Chestionar</span></a>
   </div>
@@ -364,6 +424,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
           <p class="lead rv" style="--i:4">Vrem să reducem consumul de combustibil ce ne poluează planeta, iar totul începe cu pași mici, incluzând drumul zilnic până la școală.</p>
           <div class="actions rv" style="--i:5">
             <a class="btn" href="#chestionar">Începe chestionarul</a>
+            <a class="btn btn-ghost" href="#rute">Calculează CO<sub>2</sub>-ul drumului tău</a>
           </div>
         </div></div>
       </article>
@@ -414,9 +475,14 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
     <div class="st-head">
       <p class="eyebrow">Statistici</p>
       <h2 class="display" id="st-title">Ce spun elevii din Iași</h2>
-      <p class="lead">Răspunsurile din chestionar, adunate la un loc: cum ajung elevii la școală, cât timp petrec în trafic și ce schimbări și-ar dori.</p>
+      <p class="lead">Răspunsurile din chestionar, adunate la un loc: cum ajung elevii la școală, cât timp petrec în trafic, cât CO<sub>2</sub> lasă drumul și ce schimbări și-ar dori.</p>
     </div>
     <p class="st-note" id="stNote" role="note" hidden></p>
+    <div class="co2" id="co2Band" hidden>
+      <h3 class="co2-h">Amprenta de CO<sub>2</sub> a drumurilor spre școală</h3>
+      <div class="kpis" id="co2Kpis"></div>
+      <p class="p-foot" id="co2Foot"></p>
+    </div>
     <div id="stBody"></div>
   </div>
 </section>
@@ -434,6 +500,86 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
   </div>
 </section>
 
+<section id="rute" class="routes" aria-labelledby="gm-title">
+  <div class="wrap">
+    <div class="st-head">
+      <p class="eyebrow">Green Map Iași</p>
+      <h2 class="display" id="gm-title">Cât CO<sub>2</sub> lasă drumul tău?</h2>
+      <p class="lead">Apasă pe hartă de două ori: o dată pentru plecare, o dată pentru destinație. Alege cum ajungi și vezi distanța, durata și emisiile estimate. Pentru autobuz și tramvai folosim orarele CTP Iași.</p>
+    </div>
+
+    <div class="gm-grid">
+      <div class="gm-ctl">
+        <label for="mode">Mijloc de transport</label>
+        <select id="mode">
+          <option value="pedestrian">🚶 Mers pe jos</option>
+          <option value="bicycle">🚲 Bicicletă</option>
+          <option value="auto">🚗 Mașină</option>
+          <option value="public">🚌 Transport în comun</option>
+        </select>
+
+        <label for="priority">Tipul rutei</label>
+        <select id="priority">
+          <option value="green">🌿 Rută verde</option>
+          <option value="used">📍 Rută utilizată</option>
+        </select>
+
+        <div class="gm-btns">
+          <button type="button" class="btn" id="calculate">Calculează ruta</button>
+          <button type="button" class="btn btn-ghost btn-small" id="reset">Alege alte puncte</button>
+          <button type="button" class="btn btn-ghost btn-small" id="center">Centrul Iașiului</button>
+        </div>
+
+        <p id="status" class="gm-status" role="status" aria-live="polite">Selectează punctul de plecare pe hartă.</p>
+
+        <div class="gm-res">
+          <div><span class="k-l">Distanță</span><strong id="distance">—</strong></div>
+          <div><span class="k-l">Durată</span><strong id="duration">—</strong></div>
+          <div><span class="k-l" id="co2Label">CO₂ estimat</span><strong id="co2">—</strong></div>
+        </div>
+
+        <div id="routeInfo" class="gm-card" hidden>
+          <strong id="routeTitle">Ruta selectată</strong>
+          <p id="routeDescription"></p>
+          <p id="carCompare" class="gm-car" hidden></p>
+        </div>
+
+        <p class="gm-note">Emisiile sunt estimative. Mersul pe jos și bicicleta au zero emisii directe în timpul deplasării.</p>
+      </div>
+
+      <div class="gm-map">
+        <div id="map" aria-label="Hartă interactivă a Iașiului pentru planificarea rutelor"></div>
+        <div class="gm-legend">
+          <span><i style="background:#20b56d"></i>Rută verde</span>
+          <span><i style="background:#3898ed"></i>Rută utilizată</span>
+          <span><i style="background:#f5a524"></i>Transport public</span>
+          <span><i style="background:#20c997"></i>Plecare</span>
+          <span><i style="background:#eb5757"></i>Destinație</span>
+        </div>
+      </div>
+
+      <div class="gm-steps">
+        <h3>Indicații de deplasare</h3>
+        <ol id="instructions"><li>Alege punctele pe hartă.</li></ol>
+        <p class="gm-note">Date cartografice © OpenStreetMap contributors. Rutare prin Valhalla. Orare CTP Iași, fără date în timp real.</p>
+      </div>
+    </div>
+
+    <div class="cmp">
+      <h3>Cât CO<sub>2</sub> pe kilometru</h3>
+      <p class="p-sub">Factorii folosiți de calculatorul de mai sus, pentru un pasager. Emisii directe, orientative.</p>
+      <ul class="bars">
+        <li><div class="b-top"><span class="b-l">🚶 Pe jos</span><span class="b-v">0 g/km</span></div><div class="b-track"><div class="b-fill" style="width:0%"></div></div></li>
+        <li><div class="b-top"><span class="b-l">🚲 Bicicletă</span><span class="b-v">0 g/km</span></div><div class="b-track"><div class="b-fill" style="width:0%"></div></div></li>
+        <li><div class="b-top"><span class="b-l">🚋 Tramvai</span><span class="b-v">≈ 35 g/km</span></div><div class="b-track"><div class="b-fill" style="width:23.3%"></div></div></li>
+        <li><div class="b-top"><span class="b-l">🚌 Autobuz</span><span class="b-v">≈ 80 g/km</span></div><div class="b-track"><div class="b-fill" style="width:53.3%"></div></div></li>
+        <li class="car"><div class="b-top"><span class="b-l">🚗 Mașină</span><span class="b-v">≈ 150 g/km</span></div><div class="b-track"><div class="b-fill" style="width:100%"></div></div></li>
+      </ul>
+      <p class="p-foot">Un drum de 5 km până la școală, dus-întors, cinci zile pe săptămână, înseamnă cu mașina ≈ <strong>7,5 kg CO<sub>2</sub></strong> pe săptămână. Pe jos sau cu bicicleta: zero. Pentru transportul public valoarea reală depinde de vehicul și de cât de plin este.</p>
+    </div>
+  </div>
+</section>
+
 <section id="despre" class="about" aria-labelledby="ab-title">
   <svg class="about-mark" viewBox="0 0 400 480" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><ellipse cx="200" cy="240" rx="15" ry="21"/><ellipse cx="200" cy="240" rx="32" ry="38"/><ellipse cx="200" cy="240" rx="46" ry="55"/><ellipse cx="200" cy="240" rx="57" ry="72"/><ellipse cx="200" cy="240" rx="70" ry="93"/><ellipse cx="200" cy="240" rx="85" ry="110"/><ellipse cx="200" cy="240" rx="102" ry="127"/><ellipse cx="200" cy="240" rx="116" ry="144"/><ellipse cx="200" cy="240" rx="127" ry="165"/><ellipse cx="200" cy="240" rx="140" ry="182"/><ellipse cx="200" cy="240" rx="155" ry="199"/><ellipse cx="200" cy="240" rx="172" ry="216"/><ellipse cx="200" cy="240" rx="186" ry="237"/></svg>
   <div class="wrap about-grid">
@@ -444,6 +590,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
     <div class="about-copy">
       <p class="lead">Suntem o echipă de elevi de clasa a IX-a, dornici să facem o schimbare în orașul Iași.</p>
       <p class="quote">Înțelegem prin ce trec elevii în fiecare dimineață, căci și noi trecem prin aceleași cozi nesfârșite de trafic. De aceea ne punem toată încrederea că, împreună, ne vom mobiliza spre formarea unui oraș green.</p>
+      <p>CarbonIt este un proiect dedicat mobilității sustenabile, tehnologiei și reducerii impactului transportului asupra mediului în municipiul Iași.</p>
     </div>
   </div>
   <div class="wrap"><p class="about-big">Împreună pentru un Iași <em>mai verde.</em></p><p class="about-tag">#echipaCarbonIT</p></div>
@@ -452,7 +599,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 
 <footer class="foot">
   <div class="wrap foot-row">
-    <span>© 2026 CarbonIt Movement · Iași</span>
+    <span>© 2026 CarbonIt Movement · Green Map Iași</span>
     <span>Chestionar anonim. Nu cerem numele, adresa de acasă sau alte date personale.</span>
   </div>
 </footer>
@@ -464,6 +611,7 @@ h2.display{font-size:clamp(2.2rem,5.4vw,4.2rem)}
 'use strict';
 const root=document.documentElement; root.lang='ro';
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Serverul local (server.py), care servește și pagina.
 const API_BASE='/api/';
 const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
@@ -494,7 +642,7 @@ document.addEventListener('click',e=>{
   e.preventDefault();
   glideTo(id==='acasa'?0:Math.max(0,el.getBoundingClientRect().top+window.scrollY-64));
 });
-const spyIds=['acasa','chestionar','statistici','harta','despre'];
+const spyIds=['acasa','chestionar','statistici','harta','rute','despre'];
 const tabs=$$('.bar nav a');
 function spy(){
   const y=64+Math.min(160,window.innerHeight*.2);
@@ -795,6 +943,7 @@ async function finish(reason){
     stage.appendChild(p); return;
   }
   busy=false; fin=reason;
+  loadStats(); loadCo2();   // ca noul răspuns să apară în statistici
   const tx=TEXTS[reason];
   let extra='';
   if(reason==='complete'&&typeof a.replace==='number'){
@@ -802,7 +951,7 @@ async function finish(reason){
     extra='<p class="scn">Scenariul tău: '+a.replace+' din '+c+' '+(c===1?'dimineață':'dimineți')+' fără mașină. Este un scenariu, nu o promisiune.</p>';
   }
   swap(1,()=>{
-    stage.innerHTML='<div class="done"><svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="26" cy="26" r="23"/><path d="M16 27l7 7 14-15"/></svg><h3 class="q-title" id="qt" tabindex="-1">'+tx.t+'</h3><p>'+tx.p+'</p>'+extra+'<button type="button" class="btn btn-ghost" id="again">Completează din nou</button></div>';
+    stage.innerHTML='<div class="done"><svg viewBox="0 0 52 52" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="26" cy="26" r="23"/><path d="M16 27l7 7 14-15"/></svg><h3 class="q-title" id="qt" tabindex="-1">'+tx.t+'</h3><p>'+tx.p+'</p>'+extra+'<a class="btn" href="#rute">Vezi cât CO<sub>2</sub> lasă drumul tău</a><button type="button" class="btn btn-ghost" id="again">Completează din nou</button></div>';
     qidEl.textContent='Gata';
     meter.style.transform='scaleX(1)';
     nav.hidden=true;
@@ -865,28 +1014,50 @@ function showMap(zones,sample){
     if(window.AmprentaMap) AmprentaMap.mount(mpBody,{zones:zones});
   }catch(err){ if(window.console) console.error(err); mpBody.innerHTML='<p class="empty">Harta nu a putut fi afișată.</p>'; }
 }
+function getJSON(name){
+  return fetch(API_BASE+name,{headers:{'Accept':'application/json'}})
+    .then(r=>{ if(!r.ok) throw new Error('http'); return r.json(); })
+    .then(d=>{ if(!d||!d.ok) throw new Error('date'); return d; });
+}
 function loadStats(){
   try{
-    if(!API_BASE){
-      const rows=AmprentaSample();
-      AmprentaStats.render({body:stBody,note:stNote,rows:rows,sample:true});
-      showMap(AmprentaSampleZones(rows),true);
-      return;
-    }
     AmprentaStats.loading(stBody);
     mpBody.innerHTML='<p class="empty">Se încarcă harta…</p>';
-    fetch(API_BASE+'stats',{headers:{'Accept':'application/json'}})
-      .then(r=>{ if(!r.ok) throw new Error('http'); return r.json(); })
-      .then(d=>{ if(!d||!d.ok) throw new Error('date'); AmprentaStats.render({body:stBody,note:stNote,rows:d.responses,sample:false}); showMap(d.zones||[],false); })
+    getJSON('stats')
+      .then(d=>{ AmprentaStats.render({body:stBody,note:stNote,rows:d.responses,sample:false}); showMap(d.zones||[],false); })
       .catch(()=>{ AmprentaStats.error(stBody,loadStats); AmprentaStats.error(mpBody,loadStats); });
   }catch(err){ if(window.console) console.error(err); }
 }
 loadStats();
 
+/* ---------- Amprenta de CO2 (rezumatul agregat de pe server) ---------- */
+const SCHOOL_WEEKS=36;   // săptămâni de cursuri într-un an școlar, pentru estimarea anuală
+const kg=(v,d)=>v.toLocaleString('ro-RO',{maximumFractionDigits:d});
+function loadCo2(){
+  getJSON('public-summary')
+    .then(d=>{
+      const c=d.co2;
+      if(!c||!Number.isFinite(c.totalKg5Days)||!Number.isFinite(c.averageKg5Days)) return;
+      const year=c.totalKg5Days*SCHOOL_WEEKS;
+      const yearV=year>=1000?kg(year/1000,1)+'<small>tone</small>':kg(year,0)+'<small>kg</small>';
+      $('#co2Kpis').innerHTML=
+        '<div class="kpi"><span class="k-l">Într-o săptămână</span><strong class="k-v heat">'+kg(c.totalKg5Days,1)+'<small>kg CO₂</small></strong><span class="k-s">emise pe drumul spre școală de cei '+c.includedResponses+' elevi care au răspuns</span></div>'
+       +'<div class="kpi"><span class="k-l">Pe elev</span><strong class="k-v">'+kg(c.averageKg5Days,2)+'<small>kg CO₂</small></strong><span class="k-s">în medie, în cinci zile de școală</span></div>'
+       +'<div class="kpi"><span class="k-l">Într-un an școlar</span><strong class="k-v heat">≈ '+yearV+'</strong><span class="k-s">dacă fiecare săptămână arată la fel, timp de '+SCHOOL_WEEKS+' de săptămâni</span></div>';
+      $('#co2Foot').textContent='Estimare în kg CO₂e, din lungimea drumului și mijloacele de transport declarate. '+(c.excludedResponses?c.excludedResponses+' răspunsuri fără date suficiente nu sunt incluse.':'');
+      $('#co2Band').hidden=false;
+    })
+    .catch(()=>{});
+}
+loadCo2();
+
 renderQuestion();
 })();
 </script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/app.js"></script>
 
 </body>
 </html>
+
 @endverbatim
